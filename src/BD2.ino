@@ -8,7 +8,7 @@ M5GFX display;
 #define ELM_PORT SerialBT
 #define DEBUG_PORT Serial
 
-uint8_t BLEAddress[6] = {0x00, 0x10, 0xCC, 0x4F, 0x36, 0x03};
+uint8_t BLEAddress[6] = {0x00, 0x10, 0xCC, 0x4F, 0x36, 0x03};// Address of bluetooth adapter ELM327 OBDII 
 float coolantTemp = 0.0;
 float obdVoltage = 0.0;
 float rpm = 0.0;
@@ -174,7 +174,7 @@ void requestOBDVoltage() {
     delay(100);
   }
 
-  int startIdx = response.indexOf("V");
+  float startIdx = response.indexOf("V");
   if (startIdx > 0) {
     obdVoltage = response.substring(0, startIdx).toFloat(); // Converti la risposta in un numero float
     if (obdVoltage > 0) {
