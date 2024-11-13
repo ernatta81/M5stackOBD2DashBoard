@@ -45,12 +45,12 @@ String sendATCommand(const char* command, int delayTime) {
       break;
     }
   }
-  String response = readATResponse();
+   response = readATResponse();
   return response;
 }
 
 String readATResponse() {
-  String response = "";
+   response = "";
   while (ELM_PORT.available()) {
     char c = ELM_PORT.read();
     response += c;

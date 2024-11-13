@@ -14,6 +14,7 @@ extern uint8_t BLEAddress[6];
 extern float coolantTemp;
 extern float obdVoltage;
 extern float rpm;
+extern String response;
 extern const char* protocols[];
 extern const int numProtocols;
 static constexpr int TFT_GREY = 0x5AEB;

@@ -19,13 +19,16 @@ void initializeM5Stack() {
 void autoConfigureELM327() {
   DEBUG_PORT.println("Autoconfigure ELM");
   sendATCommand("ATZ", 1000);   // Reset
+  sendATCommand("AT@", 1000);
+  String msg = "Ver: " + response;
+  displayMessage(msg.c_str());
   sendATCommand("ATE0", 1000);  // Disabilita eco
   sendATCommand("ATL0", 1000);  // Disabilita line feed
   sendATCommand("ATH1", 1000);  // Abilita header
   
   bool connected = false;
   for (int i = 0; i < numProtocols; i++) {
-    sendATCommand(protocols[i], 3000); // Seleziona protocollo
+    sendATCommand(protocols[i], 1500); // Seleziona protocollo
     if (testELM327Connection()) {
       displayMessage(("ELM327Protocol: " + String(protocols[i])).c_str());
       connected = true;
