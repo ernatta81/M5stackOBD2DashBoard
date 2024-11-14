@@ -28,9 +28,12 @@ void autoConfigureELM327() {
   
   bool connected = false;
   for (int i = 0; i < numProtocols; i++) {
-    sendATCommand(protocols[i], 1500); // Seleziona protocollo
+    sendATCommand("ATSP3", 1500); // Seleziona protocollo
+    msg ="ELM327Protocol: " + response;
+  //  sendATCommand(protocols[i], 1500); // Seleziona protocollo
     if (testELM327Connection()) {
-      displayMessage(("ELM327Protocol: " + String(protocols[i])).c_str());
+    //  displayMessage(("ELM327Protocol: " + String(protocols[i])).c_str());
+      displayMessage(msg.c_str());
       connected = true;
       delay(2000);
       break;
