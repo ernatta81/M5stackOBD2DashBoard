@@ -1,11 +1,11 @@
 /**
  * @file				BD2.ino
- * @brief				Main thread
+ * @brief				Main
  * @copyright		Revised BSD License, see section @ref LICENSE.
  * @code
  * 
  * @endcode
- * @author			Ernesto Attanasio <ernattamaker@gmail.com> ( KiWi )
+ * @author			Ernesto Attanasio <ernattamaker@gmail.com>
  * @date				13 Nov 2024
 
  * @{
