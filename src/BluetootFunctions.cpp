@@ -14,7 +14,9 @@ void initializeBluetoothConnection() {
   }
   displayMessage(" - - OBD BLE OK! - - ");
   delay(2000);
+
 }
+
 
 bool testELM327Connection() {
   String response = "";

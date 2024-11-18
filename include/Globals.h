@@ -14,6 +14,7 @@ extern uint8_t BLEAddress[6];
 extern float coolantTemp;
 extern float obdVoltage;
 extern float rpm;
+extern float maf;
 extern String response;
 extern const char* protocols[];
 extern const int numProtocols;

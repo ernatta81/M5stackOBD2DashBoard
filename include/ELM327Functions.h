@@ -5,5 +5,6 @@ void autoConfigureELM327();
 void requestCoolantTemperature();
 void requestOBDVoltage();
 void requestRPM();
+void requestMAF();
 
 #endif

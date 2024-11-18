@@ -6,7 +6,7 @@
  * 
  * @endcode
  * @author			Ernesto Attanasio <ernattamaker@gmail.com>
- * @date				13 Nov 2024
+ * @date				18 Nov 2024
 
  * @{
  */
@@ -28,6 +28,7 @@ void loop() {
   requestCoolantTemperature();
   requestOBDVoltage();
   requestRPM();
+//  requestMAF();
   updateDisplayValues();
   delay(100);
 }

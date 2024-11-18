@@ -1,9 +1,9 @@
 #ifndef BLUETOOTH_FUNCTIONS_H
 #define BLUETOOTH_FUNCTIONS_H
 
-#include <Arduino.h>  // Include questa libreria per usare String
+#include <Arduino.h>  // Questa libreria è per usare String
 
-void initializeM5Stack(); // Aggiungi questa linea
+void initializeM5Stack(); 
 void initializeBluetoothConnection();
 bool testELM327Connection();
 String sendATCommand(const char* command, int delayTime);

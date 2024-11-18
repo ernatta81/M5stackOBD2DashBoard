@@ -30,9 +30,10 @@ void initializeDisplay() {
 
 void updateDisplayValues() {
   values[0] = (int)coolantTemp;
-  values[1] = 100; // Aggiorna con il valore MAF
+  values[1] = (int)maf; 
   values[2] = obdVoltage; //
   values[3] = (int)rpm;
+  
 
   // Ridisegna le barre con i nuovi valori
   display.startWrite();
