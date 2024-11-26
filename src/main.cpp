@@ -1,4 +1,15 @@
-//#define DEBUG
+/**
+ * @file				main.cpp
+ * @brief				Main
+ * @copyright		Revised BSD License, see section @ref LICENSE.
+ * @code
+ * 
+ * @endcode
+ * @author			Ernesto Attanasio <ernattamaker@gmail.com>
+ * @date				26 Nov 2024
+ */
+#define DEBUG
+
 #include <M5Stack.h>
 #include <BluetoothSerial.h>
 
@@ -90,98 +101,6 @@ bool sendAndReadCommand(const char* cmd, String& response, int delayTime) {
     return false;
   }
 }
-
-/*
-float getCoolantTemp() {
-  String response;
-  if (sendAndReadCommand("0105", response, 2000)) {
-    #ifdef DEBUG
-      Serial.println("CT 0105 RAW: " + response);
-    #endif
-    String printTemp ="";
-    if (response.length() >= 8 && response.indexOf("4105") >= 0) {
-      byte highByte = strtoul(response.substring(6, 8).c_str(), NULL, 16);      // Converti i caratteri esadecimali in byte
-      byte lowByte = strtoul(response.substring(8, 10).c_str(), NULL, 16);
-      float temp = (highByte * 256 + lowByte) - 40; 
-      #ifdef DEBUG
-        printTemp = String(temp); // conversione per stampare il dato in DEBUG
-        Serial.print("CT 0105 convert: " + printTemp);
-      #endif
-      return temp;
-    } else {
-      #ifdef DEBUG
-        Serial.print("CT 0105 IF indexOf 4105 && length 8" + response);
-      #endif
-      return 0.0; // Se non c'è risposta valida
-    }
-  } else {
-    #ifdef DEBUG
-      Serial.print("CT 0105 TimeOut response");
-    #endif
-    return 0.0; // In caso di errore
-  }
-}
-
-float getIntakeTemp() {
-  String response;
-  if (sendAndReadCommand("010F", response, 2000)) {
-    #ifdef DEBUG
-      Serial.println("INTAKE 010F RAW: " + response);
-    #endif
-    if (response.length() >= 8 && response.indexOf("410F") >= 0) {
-
-      byte highByte = strtoul(response.substring(6, 8).c_str(), NULL, 16);      // Converti i caratteri esadecimali in byte
-      byte lowByte = strtoul(response.substring(8, 10).c_str(), NULL, 16);
-      float iTemp = (highByte * 256 + lowByte) - 40;  
-      #ifdef DEBUG
-        String printITemp = String(iTemp); // conversione per stampare il dato in DEBUG
-        Serial.println("INTAKE 010F convert: " + printITemp);
-      #endif
-      return iTemp;
-    } else {
-        #ifdef DEBUG
-          Serial.println("INTAKE 010F IF Length && indexOf fail: " + response);
-        #endif
-      return 0.0; // Se non c'è risposta valida
-    }
-  } else {
-      #ifdef DEBUG
-        Serial.print("INTAKE 010F TimeOut response");
-      #endif
-    return 0.0; // In caso di errore
-  }
-}
-float getRPM() {
-  String response;
-  if (sendAndReadCommand("010C", response, 2000)) {
-    #ifdef DEBUG
-      Serial.println("RPM 010C RAW: " + response);
-    #endif    
-    String printRPM = "";
-    if (response.length() >= 8 && response.indexOf("410C") >= 0) {
-      byte highByte = strtoul(response.substring(6, 8).c_str(), NULL, 16);
-      byte lowByte = strtoul(response.substring(8, 10).c_str(), NULL, 16);
-      int rpm = (highByte * 256 + lowByte) / 4;
-      
-      #ifdef DEBUG
-        printRPM = String(rpm); // conversione per stampare il dato in DEBUG
-        Serial.println("RPM 010C response convert:" + printRPM);
-      #endif
-      return rpm;
-    } else {
-      #ifdef DEBUG
-        Serial.println("RPM 010C IF Length && indexOf fail: " + response );
-      #endif
-      return 0.0; // Se non c'è risposta valida
-    }
-  } else {
-      #ifdef DEBUG
-        Serial.print("RPM 010C TimeOut response");
-      #endif
-    return 0.0; // In caso di errore
-  }
-}
-*/
 
 float getCoolantTemp() {
   static float lastValue = 0.0;
