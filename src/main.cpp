@@ -32,17 +32,19 @@ void dataRequestOBD();
 void displayDebugMessage(const char* message, int x , int y, uint16_t textColour);
 
 uint8_t BLEAddress[6] = {0x00, 0x10, 0xCC, 0x4F, 0x36, 0x03};  // Indirizzo Bluetooth del modulo ELM327
+
 float coolantTemp = 0.0;
 float rpm = 0.0;
 float intakeTemp = 0.0;
 float obdVoltage = 0.0;
 float engineLoad = 0.0;
 float MAF = 0.0;
-unsigned long lastVoltageQueryTime = 0;
-const unsigned long voltageQueryInterval = 4000; // Intervallo di 4 secondi
 float lastCoolantTemp = -999.0; // Valore iniziale fuori da ogni possibile range di temperatura
 float lastIntakeTemp = -999.0; // Valore iniziale fuori da ogni possibile range di temperatura
 
+const unsigned long voltageQueryInterval = 4000; // Intervallo di 4 secondi
+
+unsigned long lastVoltageQueryTime = 0;
 unsigned long lastOBDQueryTime = 0;
 unsigned long OBDQueryInterval = 800; // Intervallo di query OBD in millisecondi
 
@@ -55,13 +57,14 @@ void setup() {
   Serial.println("Setup in corso...");
   
   BTconnect();
-  delay(2000);
+  delay(1500);
   ELMinit();
-  delay(1000);
+  delay(500);
 }
 
 void loop() {
   unsigned long currentMillis = millis();
+  
   if (currentMillis - lastOBDQueryTime >= OBDQueryInterval) {  // Verifica se è il momento di eseguire una nuova query OBD
     lastOBDQueryTime = currentMillis;
     dataRequestOBD();
@@ -82,6 +85,7 @@ bool sendAndReadCommand(const char* cmd, String& response, int delayTime) {
     }
     delay(50);
   }
+  
   if (response.length() > 0) {
     #ifdef DEBUG
         displayDebugMessage(response.c_str(), 0 , 200, GREEN);
@@ -106,10 +110,12 @@ bool sendAndReadCommand(const char* cmd, String& response, int delayTime) {
 float getCoolantTemp() {
   static float lastValue = 0.0;
   String response;
+
   if (sendAndReadCommand("0105", response, 1000)) {
     #ifdef DEBUG
       Serial.println("CT 0105 RAW: " + response);
     #endif
+
     if (response.length() >= 6 && response.indexOf("4105") == 0) {
       byte tempByte = strtoul(response.substring(4, 6).c_str(), NULL, 16); // Converti il carattere esadecimale in byte
       float temp = tempByte - 40;
@@ -136,10 +142,12 @@ float getCoolantTemp() {
 float getIntakeTemp() {
   static float lastValue = 0.0;
   String response;
+
   if (sendAndReadCommand("010F", response, 1000)) {
     #ifdef DEBUG
       Serial.println("INTAKE 010F RAW: " + response);
     #endif
+
     if (response.length() >= 6 && response.indexOf("410F") == 0) {
       byte tempByte = strtoul(response.substring(4, 6).c_str(), NULL, 16); // Converti il carattere esadecimale in byte
       float iTemp = tempByte - 40; 
@@ -166,11 +174,13 @@ float getIntakeTemp() {
 float getRPM() {
   static int lastValue = 0;
   String response;
+
   if (sendAndReadCommand("010C", response, 1000)) {
     #ifdef DEBUG
       Serial.println("RPM 010C RAW: " + response);
     #endif    
     String printRPM = "";
+
     if (response.length() >= 8 && response.indexOf("410C") >= 0) {
       byte highByte = strtoul(response.substring(4, 6).c_str(), NULL, 16); // Indici corretti per il primo byte
       byte lowByte = strtoul(response.substring(6, 8).c_str(), NULL, 16);  // Indici corretti per il secondo byte
@@ -200,10 +210,12 @@ float getRPM() {
 float getEngineLoad() {
   static float lastValue = 0.0;
   String response;
+
   if (sendAndReadCommand("0104", response, 1000)) {
     #ifdef DEBUG
       Serial.println("EL 0104 RAW: " + response);
     #endif
+
     if (response.length() >= 8 && response.indexOf("4104") >= 0) {
       byte highByte = strtoul(response.substring(4, 6).c_str(), NULL, 16);
       float load = (highByte * 100.0) / 255.0;
@@ -231,9 +243,11 @@ float getEngineLoad() {
 float getOBDVoltage() {
   static int lastValue = 0;
   String response;
+
   if (sendAndReadCommand("ATRV", response, 1000)) {
     response.trim();      // Rimuove eventuali spazi bianchi all'inizio e alla fine della stringa
     int indexV = response.indexOf('V');
+
     if (indexV >= 0) {
       String voltageStr = response.substring(0, indexV);
       float voltage = voltageStr.toFloat();
@@ -298,7 +312,7 @@ void updateDisplay() {
   if (coolantTemp < 50) {
     M5.Lcd.setCursor(0, 0);
     M5.Lcd.setTextColor(LIGHTGREY);
-    M5.Lcd.setTextColor(coolantTemp < 50 ? LIGHTGREY : (coolantTemp <= 81 ? ORANGE : (coolantTemp <= 97 ? GREEN : RED)));
+//    M5.Lcd.setTextColor(coolantTemp < 50 ? LIGHTGREY : (coolantTemp <= 81 ? ORANGE : (coolantTemp <= 97 ? GREEN : RED)));
     M5.Lcd.printf("Coolant Temp: %.1f C\n", coolantTemp);
   } else if (coolantTemp >= 50 && coolantTemp <= 81) {
     M5.Lcd.setCursor(0, 0);
