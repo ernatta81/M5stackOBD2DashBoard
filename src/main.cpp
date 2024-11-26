@@ -33,8 +33,7 @@ float lastCoolantTemp = -999.0; // Valore iniziale fuori da ogni possibile range
 float lastIntakeTemp = -999.0; // Valore iniziale fuori da ogni possibile range di temperatura
 
 unsigned long lastOBDQueryTime = 0;
-unsigned long OBDQueryInterval = 1000; // Intervallo di query OBD in millisecondi
-unsigned long responseTimeout = 5000;  // Timeout per la risposta OBD in millisecondi
+unsigned long OBDQueryInterval = 800; // Intervallo di query OBD in millisecondi
 
 void setup() {
   M5.begin();
@@ -436,37 +435,59 @@ bool ELMinit() {
   #endif
 
   if (!sendAndReadCommand("ATZ", response, 1500)) {
-    displayDebugMessage("Err ATZ", 0 , 20, WHITE);
+    #ifdef DEBUG
+      displayDebugMessage("Err ATZ", 0 , 20, WHITE);
+    #endif
     return false;
   }
-  displayDebugMessage(response.c_str(), 0 , 20, WHITE);
+  #ifdef DEBUG
+    displayDebugMessage(response.c_str(), 0 , 20, WHITE);
+  #endif
 
   if (!sendAndReadCommand("ATE0", response, 1500)) {
-    displayDebugMessage("Err ATE0", 0 , 40, WHITE);
+    #ifdef DEBUG
+      displayDebugMessage("Err ATE0", 0 , 40, WHITE);
+    #endif
     return false;
   }
-  displayDebugMessage(response.c_str(), 0 , 40, WHITE);
+  #ifdef DEBUG
+    displayDebugMessage(response.c_str(), 0 , 40, WHITE);
+  #endif
 
   if (!sendAndReadCommand("ATL0", response, 1500)) {
-    displayDebugMessage("Err ATL0", 0 , 60, WHITE);
+    #ifdef DEBUG
+      displayDebugMessage("Err ATL0", 0 , 60, WHITE);
+    #endif
     return false;
   }
-  displayDebugMessage(response.c_str(), 0 , 60, WHITE);
+  #ifdef DEBUG
+    displayDebugMessage(response.c_str(), 0 , 60, WHITE);
+  #endif
 
   if (!sendAndReadCommand("ATS0", response, 1500)) {
-    displayDebugMessage("Err ATS0", 0 , 80, WHITE);
+    #ifdef DEBUG
+      displayDebugMessage("Err ATS0", 0 , 80, WHITE);
+    #endif
     return false;
   }
-  displayDebugMessage(response.c_str(), 0 , 80, WHITE);
+  #ifdef DEBUG
+    displayDebugMessage(response.c_str(), 0 , 80, WHITE);
+  #endif
 
   if (!sendAndReadCommand("ATST0A", response, 1500)) {
-    displayDebugMessage("Err ATST0A", 0 , 100, WHITE);
+    #ifdef DEBUG
+      displayDebugMessage("Err ATST0A", 0 , 100, WHITE);
+    #endif
     return false;
   }
-  displayDebugMessage(response.c_str(), 0 , 100, WHITE);
+  #ifdef DEBUG
+    displayDebugMessage(response.c_str(), 0 , 100, WHITE);
+  #endif
 
   if (!sendAndReadCommand("ATSP0", response, 15000)) {  // Imposta protocollo automatico SP 0 e gestire la risposta "SEARCHING..."
-    displayDebugMessage("Err ATSP0", 0 , 120, WHITE);
+    #ifdef DEBUG
+      displayDebugMessage("Err ATSP0", 0 , 120, WHITE);
+    #endif
     return false;
   }
   #ifdef DEBUG
@@ -478,13 +499,17 @@ bool ELMinit() {
 
 bool BTconnect(){
   ELM_PORT.begin(m5Name, true);  // Avvia la connessione Bluetooth
-  displayDebugMessage("Connessione BT...", 0 , 200, WHITE);
+  #ifdef DEBUG
+    displayDebugMessage("Connessione BT...", 0 , 200, WHITE);
+  #endif
   int retries = 0;  // Tentativo connessione bluetooth ELM327 (5 try)
   bool connected = false;
   while (retries < 5 && !connected) {
     connected = ELM_PORT.connect(BLEAddress);
     if (!connected) {
-      displayDebugMessage("BT Conn FAIL", 0 , 200, WHITE);
+      #ifdef DEBUG
+        displayDebugMessage("BT Conn FAIL", 0 , 200, WHITE);
+      #endif
       retries++;
       delay(500);
     }
@@ -509,7 +534,7 @@ bool BTconnect(){
 void dataRequestOBD() {
   unsigned long currentMillis = millis();
   float newCoolantTemp = getCoolantTemp();
-  if (abs(newCoolantTemp - lastCoolantTemp) >= 1.0) {
+  if (abs(newCoolantTemp - lastCoolantTemp) >= 0.5) {
     coolantTemp = newCoolantTemp;
     lastCoolantTemp = newCoolantTemp;
   }
@@ -517,7 +542,7 @@ void dataRequestOBD() {
   rpm = getRPM();
 
   float newIntakeTemp = getIntakeTemp();
-  if (abs(newIntakeTemp - lastIntakeTemp) >= 1.0) {
+  if (abs(newIntakeTemp - lastIntakeTemp) >= 0.8) {
     intakeTemp = newIntakeTemp;
     lastIntakeTemp = newIntakeTemp;
   }
