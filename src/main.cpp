@@ -18,18 +18,18 @@ BluetoothSerial ELM_PORT;
 #define m5Name "M5Stack_OBD"
 
 // Dichiarazione funzioni
-void updateDisplay();
 float getCoolantTemp();
 float getRPM();
 float getIntakeTemp();
 float getOBDVoltage();
 float getEngineLoad();
 float getMAF();
-void displayDebugMessage(const char* message, int x , int y, uint16_t textColour);
-bool sendAndReadCommand(const char* cmd, String& response, int delayTime);
 bool ELMinit();
 bool BTconnect();
+bool sendAndReadCommand(const char* cmd, String& response, int delayTime);
+void updateDisplay();
 void dataRequestOBD();
+void displayDebugMessage(const char* message, int x , int y, uint16_t textColour);
 
 uint8_t BLEAddress[6] = {0x00, 0x10, 0xCC, 0x4F, 0x36, 0x03};  // Indirizzo Bluetooth del modulo ELM327
 float coolantTemp = 0.0;
@@ -83,14 +83,15 @@ bool sendAndReadCommand(const char* cmd, String& response, int delayTime) {
     delay(50);
   }
   if (response.length() > 0) {
-    M5.Lcd.setCursor(0, 60);
     #ifdef DEBUG
         displayDebugMessage(response.c_str(), 0 , 200, GREEN);
     #endif
   }
 
   if (response.length() == 0) {
-    Serial.println("No RCV");
+    #ifdef DEBUG
+      Serial.println("No RCV");
+    #endif
     return false;
   }
 
@@ -113,19 +114,19 @@ float getCoolantTemp() {
       byte tempByte = strtoul(response.substring(4, 6).c_str(), NULL, 16); // Converti il carattere esadecimale in byte
       float temp = tempByte - 40;
       #ifdef DEBUG
-        Serial.print("CT 0105 convert: " + String(temp));
+        Serial.println("CT 0105 convert: " + String(temp));
       #endif
       lastValue = temp;
       return temp;
     } else {
       #ifdef DEBUG
-        Serial.print("CT 0105 IF indexOf 4105 && length >= 6: " + response);
+        Serial.println("CT 0105 IF indexOf 4105 && length >= 6: " + response);
       #endif
       //return 0.0; // Se non c'è risposta valida
     }
   } else {
     #ifdef DEBUG
-      Serial.print("CT 0105 TimeOut response");
+      Serial.println("CT 0105 TimeOut response");
     #endif
     //return 0.0; // In caso di errore
   }
@@ -155,7 +156,7 @@ float getIntakeTemp() {
     }
   } else {
     #ifdef DEBUG
-      Serial.print("INTAKE 010F TimeOut response");
+      Serial.println("INTAKE 010F TimeOut response");
     #endif
     //return 0.0; // In caso di errore
   }
@@ -189,7 +190,7 @@ float getRPM() {
     }
   } else {
     #ifdef DEBUG
-      Serial.print("RPM 010C TimeOut response");
+      Serial.println("RPM 010C TimeOut response");
     #endif
     //return 0.0; // In caso di errore
   }
@@ -220,7 +221,7 @@ float getEngineLoad() {
     }
   } else {
     #ifdef DEBUG
-      Serial.print("EL TimeOut response");
+      Serial.println("EL TimeOut response");
     #endif
     //return 0.0; // In caso di errore
   }
@@ -249,7 +250,7 @@ float getOBDVoltage() {
     }
   } else {
       #ifdef DEBUG
-        Serial.print("ATRV TimeOut response");
+        Serial.println("ATRV TimeOut response");
       #endif
    // return 0.0; // In caso di errore
   }
@@ -271,19 +272,19 @@ float getMAF() {
       float maf = ((A * 256) + B) / 100.0; // Calcolo del MAF in g/s
 
       #ifdef DEBUG
-        Serial.print("MAF 0110 convert: " + String(maf));
+        Serial.println("MAF 0110 convert: " + String(maf));
       #endif
 
       lastValidMAF = maf; // Aggiorna l'ultimo valore valido
       return maf;
     } else {
       #ifdef DEBUG
-        Serial.print("MAF 0110 IF indexOf 4110 && length >= 6: " + response);
+        Serial.println("MAF 0110 IF indexOf 4110 && length >= 6: " + response);
       #endif
     }
   } else {
     #ifdef DEBUG
-      Serial.print("MAF 0110 TimeOut response");
+      Serial.println("MAF 0110 TimeOut response");
     #endif
   }
 
@@ -297,6 +298,7 @@ void updateDisplay() {
   if (coolantTemp < 50) {
     M5.Lcd.setCursor(0, 0);
     M5.Lcd.setTextColor(LIGHTGREY);
+    M5.Lcd.setTextColor(coolantTemp < 50 ? LIGHTGREY : (coolantTemp <= 81 ? ORANGE : (coolantTemp <= 97 ? GREEN : RED)));
     M5.Lcd.printf("Coolant Temp: %.1f C\n", coolantTemp);
   } else if (coolantTemp >= 50 && coolantTemp <= 81) {
     M5.Lcd.setCursor(0, 0);
@@ -336,7 +338,6 @@ void updateDisplay() {
   M5.Lcd.printf("MAF: %.1f%%\n", MAF);
 }
 
-
 void displayDebugMessage(const char* message, int x , int y, uint16_t textcolour)   {
   M5.Lcd.setTextColor(textcolour);
   M5.Lcd.fillRect(x, y, 320, 40, BLACK);  // Pulisce la parte bassa del display
@@ -350,7 +351,6 @@ bool ELMinit() {
 
   #ifdef DEBUG
     displayDebugMessage("ELM init...", 0 ,200, WHITE);
-    Serial.println("ELM init...");
   #endif
 
   if (!sendAndReadCommand("ATZ", response, 1500)) {
@@ -437,14 +437,12 @@ bool BTconnect(){
   if (!connected) {
     #ifdef DEBUG
       displayDebugMessage("ELM BT NOT FOUND", 0 , 200, WHITE);
-      Serial.println("ELM BT not found");
     #endif
     return false;  // Loop infinito se non riesce a connettersi
   }
   else {
     #ifdef DEBUG
       displayDebugMessage("Connessione BT OK!", 0 , 200, WHITE);
-      Serial.println("BT Conn OK!");
     #endif
     return true;
   }
