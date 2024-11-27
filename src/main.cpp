@@ -9,13 +9,23 @@
  * @date				26 Nov 2024
  */
 #define DEBUG
+#define m5Name "M5Stack_OBD"
+#define BUFFER_SIZE 10 //Buffer circolare
 
 #include <M5Stack.h>
 #include <BluetoothSerial.h>
 
 BluetoothSerial ELM_PORT;
 
-#define m5Name "M5Stack_OBD"
+struct OBDData{
+  String response;
+  unsigned long timestamp;
+
+};
+
+OBDData buffer[BUFFER_SIZE];
+int head = 0;
+int tail = 0;
 
 // Dichiarazione funzioni
 float getCoolantTemp();
@@ -27,9 +37,14 @@ float getMAF();
 bool ELMinit();
 bool BTconnect();
 bool sendAndReadCommand(const char* cmd, String& response, int delayTime);
+bool isBufferEmpty();
+void enqueue(String response);
 void updateDisplay();
 void dataRequestOBD();
 void displayDebugMessage(const char* message, int x , int y, uint16_t textColour);
+void processResponses();
+
+OBDData dequeue();
 
 uint8_t BLEAddress[6] = {0x00, 0x10, 0xCC, 0x4F, 0x36, 0x03};  // Indirizzo Bluetooth del modulo ELM327
 
@@ -46,7 +61,7 @@ const unsigned long voltageQueryInterval = 4000; // Intervallo di 4 secondi
 
 unsigned long lastVoltageQueryTime = 0;
 unsigned long lastOBDQueryTime = 0;
-unsigned long OBDQueryInterval = 800; // Intervallo di query OBD in millisecondi
+unsigned long OBDQueryInterval = 500; // Intervallo di query OBD in millisecondi
 
 void setup() {
   M5.begin();
@@ -107,202 +122,57 @@ bool sendAndReadCommand(const char* cmd, String& response, int delayTime) {
   }
 }
 
-float getCoolantTemp() {
-  static float lastValue = 0.0;
-  String response;
-
-  if (sendAndReadCommand("0105", response, 1000)) {
-    #ifdef DEBUG
-      Serial.println("CT 0105 RAW: " + response);
-    #endif
-
-    if (response.length() >= 6 && response.indexOf("4105") == 0) {
-      byte tempByte = strtoul(response.substring(4, 6).c_str(), NULL, 16); // Converti il carattere esadecimale in byte
-      float temp = tempByte - 40;
-      #ifdef DEBUG
-        Serial.println("CT 0105 convert: " + String(temp));
-      #endif
-      lastValue = temp;
-      return temp;
-    } else {
-      #ifdef DEBUG
-        Serial.println("CT 0105 IF indexOf 4105 && length >= 6: " + response);
-      #endif
-      //return 0.0; // Se non c'è risposta valida
-    }
-  } else {
-    #ifdef DEBUG
-      Serial.println("CT 0105 TimeOut response");
-    #endif
-    //return 0.0; // In caso di errore
+float getCoolantTemp(String response) {
+  if (response.length() >= 6 && response.indexOf("4105") == 0) {
+    byte tempByte = strtoul(response.substring(4, 6).c_str(), NULL, 16);
+    return tempByte - 40;
   }
-  return lastValue;
+  return -999.0; // Valore fuori range se non c'è risposta valida
 }
 
-float getIntakeTemp() {
-  static float lastValue = 0.0;
-  String response;
-
-  if (sendAndReadCommand("010F", response, 1000)) {
-    #ifdef DEBUG
-      Serial.println("INTAKE 010F RAW: " + response);
-    #endif
-
-    if (response.length() >= 6 && response.indexOf("410F") == 0) {
-      byte tempByte = strtoul(response.substring(4, 6).c_str(), NULL, 16); // Converti il carattere esadecimale in byte
-      float iTemp = tempByte - 40; 
-      #ifdef DEBUG
-        Serial.println("INTAKE 010F convert: " + String(iTemp)); // conversione per stampare il dato in DEBUG
-      #endif
-      lastValue = iTemp;
-      return iTemp;
-    } else {
-      #ifdef DEBUG
-        Serial.println("INTAKE 010F IF Length && indexOf fail: " + response);
-      #endif
-      //return 0.0; // Se non c'è risposta valida
-    }
-  } else {
-    #ifdef DEBUG
-      Serial.println("INTAKE 010F TimeOut response");
-    #endif
-    //return 0.0; // In caso di errore
+float getRPM(String response) {
+  if (response.length() >= 8 && response.indexOf("410C") >= 0) {
+    byte highByte = strtoul(response.substring(4, 6).c_str(), NULL, 16);
+    byte lowByte = strtoul(response.substring(6, 8).c_str(), NULL, 16);
+    return (highByte * 256 + lowByte) / 4;
   }
- return lastValue;
+  return -999.0; // Valore fuori range se non c'è risposta valida
 }
 
-float getRPM() {
-  static int lastValue = 0;
-  String response;
-
-  if (sendAndReadCommand("010C", response, 1000)) {
-    #ifdef DEBUG
-      Serial.println("RPM 010C RAW: " + response);
-    #endif    
-    String printRPM = "";
-
-    if (response.length() >= 8 && response.indexOf("410C") >= 0) {
-      byte highByte = strtoul(response.substring(4, 6).c_str(), NULL, 16); // Indici corretti per il primo byte
-      byte lowByte = strtoul(response.substring(6, 8).c_str(), NULL, 16);  // Indici corretti per il secondo byte
-      int rpm = (highByte * 256 + lowByte) / 4;
-      
-      #ifdef DEBUG
-        printRPM = String(rpm); // Conversione per stampare il dato in DEBUG
-        Serial.println("RPM 010C response convert:" + printRPM);
-      #endif
-      lastValue = rpm;
-      return rpm;
-    } else {
-      #ifdef DEBUG
-        Serial.println("RPM 010C IF Length && indexOf fail: " + response);
-      #endif
-      //return 0.0; // Se non c'è risposta valida
-    }
-  } else {
-    #ifdef DEBUG
-      Serial.println("RPM 010C TimeOut response");
-    #endif
-    //return 0.0; // In caso di errore
+float getEngineLoad(String response) {
+  if (response.length() >= 8 && response.indexOf("4104") >= 0) {
+    byte highByte = strtoul(response.substring(4, 6).c_str(), NULL, 16);
+    return (highByte * 100.0) / 255.0;
   }
- return lastValue;
+  return -999.0; // Valore fuori range se non c'è risposta valida
 }
 
-float getEngineLoad() {
-  static float lastValue = 0.0;
-  String response;
-
-  if (sendAndReadCommand("0104", response, 1000)) {
-    #ifdef DEBUG
-      Serial.println("EL 0104 RAW: " + response);
-    #endif
-
-    if (response.length() >= 8 && response.indexOf("4104") >= 0) {
-      byte highByte = strtoul(response.substring(4, 6).c_str(), NULL, 16);
-      float load = (highByte * 100.0) / 255.0;
-      #ifdef DEBUG
-        String eLoad = String(load); // conversione per stampare il dato in DEBUG
-        Serial.println("EL 0104 convert: " + eLoad);
-      #endif
-      lastValue = load;
-      return load;
-    } else {
-      #ifdef DEBUG
-        Serial.println("EL 0104 IF Length && indexOf fail: " + response);
-      #endif
-      //return 0.0; // Se non c'è risposta valida
-    }
-  } else {
-    #ifdef DEBUG
-      Serial.println("EL TimeOut response");
-    #endif
-    //return 0.0; // In caso di errore
+float getIntakeTemp(String response) {
+  if (response.length() >= 6 && response.indexOf("410F") == 0) {
+    byte tempByte = strtoul(response.substring(4, 6).c_str(), NULL, 16);
+    return tempByte - 40;
   }
-  return lastValue;
+  return -999.0; // Valore fuori range se non c'è risposta valida
 }
 
-float getOBDVoltage() {
-  static int lastValue = 0;
-  String response;
-
-  if (sendAndReadCommand("ATRV", response, 1000)) {
-    response.trim();      // Rimuove eventuali spazi bianchi all'inizio e alla fine della stringa
-    int indexV = response.indexOf('V');
-
-    if (indexV >= 0) {
-      String voltageStr = response.substring(0, indexV);
-      float voltage = voltageStr.toFloat();
-        #ifdef DEBUG
-          displayDebugMessage(response.c_str(), 0, 200, PINK);
-        #endif
-        lastValue = voltage;
-      return voltage;
-    } else {
-        #ifdef DEBUG
-          displayDebugMessage("Err Volt", 0 , 200, PINK);
-        #endif
-      //return 0.0; // In caso di risposta non valida
-    }
-  } else {
-      #ifdef DEBUG
-        Serial.println("ATRV TimeOut response");
-      #endif
-   // return 0.0; // In caso di errore
+float getOBDVoltage(String response) {
+  response.trim();
+  int indexV = response.indexOf('V');
+  if (indexV >= 0) {
+    String voltageStr = response.substring(0, indexV);
+    return voltageStr.toFloat();
   }
- return lastValue;
+  return -999.0; // Valore fuori range se non c'è risposta valida
 }
 
-float getMAF() {
-  static float lastValidMAF = 0.0; // Variabile per conservare l'ultimo valore valido
-  String response;
 
-  if (sendAndReadCommand("0110", response, 2000)) {
-    #ifdef DEBUG
-      Serial.println("MAF 0110 RAW: " + response);
-    #endif
-
-    if (response.length() >= 6 && response.indexOf("4110") == 0) {
-      int A = strtoul(response.substring(4, 6).c_str(), NULL, 16); // Converti il carattere esadecimale in byte
-      int B = strtoul(response.substring(6, 8).c_str(), NULL, 16); // Converti il carattere esadecimale in byte
-      float maf = ((A * 256) + B) / 100.0; // Calcolo del MAF in g/s
-
-      #ifdef DEBUG
-        Serial.println("MAF 0110 convert: " + String(maf));
-      #endif
-
-      lastValidMAF = maf; // Aggiorna l'ultimo valore valido
-      return maf;
-    } else {
-      #ifdef DEBUG
-        Serial.println("MAF 0110 IF indexOf 4110 && length >= 6: " + response);
-      #endif
-    }
-  } else {
-    #ifdef DEBUG
-      Serial.println("MAF 0110 TimeOut response");
-    #endif
+float getMAF(String response) {
+  if (response.length() >= 6 && response.indexOf("4110") == 0) {
+    int A = strtoul(response.substring(4, 6).c_str(), NULL, 16);
+    int B = strtoul(response.substring(6, 8).c_str(), NULL, 16);
+    return ((A * 256) + B) / 100.0;
   }
-
-  return lastValidMAF; // Restituisci l'ultimo valore valido in caso di errore o risposta non valida
+  return -999.0; // Valore fuori range se non c'è risposta valida
 }
 
 
@@ -462,26 +332,102 @@ bool BTconnect(){
   }
 }
 
-void dataRequestOBD() {
+void enqueue(String response){
+  buffer[head].response = response;
+  buffer[head].timestamp = millis();
+  head = (head + 1) % BUFFER_SIZE;
+  if (head == tail){
+    tail = (tail + 1) % BUFFER_SIZE;
+  }
+}
+
+OBDData dequeue(){
+  OBDData data = buffer[tail];
+  tail = (tail + 1) % BUFFER_SIZE;
+  return data;
+}
+
+bool isBufferEmpty(){
+  return head == tail;
+}
+
+void processResposes(){
+  while(!isBufferEmpty()){
+    OBDData data = dequeue();
+    #ifdef DEBUG
+      Serial.println("Preocessing " + data.response);
+    #endif
+  }
+}
+
+void dataRequestOBD(){
   unsigned long currentMillis = millis();
-  float newCoolantTemp = getCoolantTemp();
-  if (abs(newCoolantTemp - lastCoolantTemp) >= 0.5) {
-    coolantTemp = newCoolantTemp;
-    lastCoolantTemp = newCoolantTemp;
+  static unsigned long lastCoolantRequestTime = 0;
+
+  if ( currentMillis - lastCoolantRequestTime >= OBDQueryInterval){
+    lastCoolantRequestTime = currentMillis;
+    String response;
+    if(sendAndReadCommand("0105", response, 2000)){
+      enqueue(response);
+    }
   }
 
-  rpm = getRPM();
+  static unsigned long lastIntakeTempRequestTime  = 0;
 
-  float newIntakeTemp = getIntakeTemp();
-  if (abs(newIntakeTemp - lastIntakeTemp) >= 0.8) {
-    intakeTemp = newIntakeTemp;
-    lastIntakeTemp = newIntakeTemp;
+  if ( currentMillis - lastIntakeTempRequestTime  >= OBDQueryInterval){
+    lastIntakeTempRequestTime  = currentMillis;
+    String response;
+    if(sendAndReadCommand("010F", response, 2000)){
+      enqueue(response);
+    }
   }
 
-  if (currentMillis - lastVoltageQueryTime >= voltageQueryInterval) {
-    obdVoltage = getOBDVoltage();
-    lastVoltageQueryTime = currentMillis;
-  }
-  MAF = getMAF();
-  engineLoad = getEngineLoad();
+  static unsigned long lastRPMRequestTime   = 0;
+
+  if ( currentMillis - lastRPMRequestTime   >= OBDQueryInterval){
+    lastRPMRequestTime   = currentMillis;
+    String response;
+    if(sendAndReadCommand("010C", response, 2000)){
+      enqueue(response);
+    }
+  }  
+
+  static unsigned long lastEngineLoadRequestTime    = 0;
+
+  if ( currentMillis - lastEngineLoadRequestTime    >= OBDQueryInterval){
+    lastEngineLoadRequestTime    = currentMillis;
+    String response;
+    if(sendAndReadCommand("0104", response, 2000)){
+      enqueue(response);
+    }
+  }  
+
+ if (currentMillis - lastVoltageQueryTime >= voltageQueryInterval) {   // Richiede la tensione ogni 4000 ms 
+   String response;
+   if (sendAndReadCommand("ATRV", response, 1000)) {
+     enqueue(response); // Metti in coda la risposta 
+   }
+   lastVoltageQueryTime = currentMillis; 
+ }
+
+  processResponses();
+}
+
+void processResponses(){
+  while (!isBufferEmpty()){
+    OBDData data = dequeue(); 
+    if (data.response.indexOf("4105") >= 0){
+      coolantTemp = getCoolantTemp(data.response);
+    }else if (data.response.indexOf("410C") >= 0){
+      rpm = getRPM(data.response); 
+     }else if (data.response.indexOf("410F") >= 0){
+       intakeTemp = getIntakeTemp(data.response); 
+      }else if (data.response.indexOf("ATRV") >= 0){
+        obdVoltage = getOBDVoltage(data.response);
+       }else if (data.response.indexOf("4110") >= 0){
+         MAF = getMAF(data.response);
+        }else if (data.response.indexOf("4104") >= 0){
+          engineLoad = getEngineLoad(data.response); 
+         }
+    }
 }
