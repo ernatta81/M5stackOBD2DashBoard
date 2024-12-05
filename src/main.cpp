@@ -71,10 +71,17 @@ float MAF = 0.0;
 float lastCoolantTemp = -999.0; 
 float lastIntakeTemp = -999.0; 
 float lastOilTemp = -999.0;
+float lastEngineLoad = -999.0;
 float barometricPressure = 0.0;
 float dtcStatus = 0.0;
 
-const unsigned long voltageQueryInterval = 4000; // Intervallo di 4 secondi
+bool firstMainScreen = true;
+bool firstCoolantScreen = true;
+bool firstEngineScreen = true;
+bool firstBarScreen = true;
+bool firstMafScreen = true;
+
+const unsigned long voltageQueryInterval = 1000; // Intervallo di 4 secondi
 
 unsigned long lastVoltageQueryTime = 0;
 unsigned long lastOBDQueryTime = 0;
@@ -118,7 +125,7 @@ void loop() {
     M5.Lcd.setTextSize(2);
     M5.Lcd.clearDisplay();
   }
-
+  
   switch (screenIndex[z]){
     case 0: mainScreen(); break;
     case 1: coolantScreen(); break;
@@ -144,40 +151,58 @@ void coolantScreen() {
   static float lastCoolantTempMenu = -999.0;
   static float lastBarometricPressure = -999.0;
   static float lastIntakeTemp = -999.0;
-
-  M5.Lcd.drawFastHLine(0, 120, 320 , YELLOW);
-  M5.Lcd.drawFastVLine(150, 0, 120, GREEN);
-  M5.Lcd.setCursor(0, 0);
-  M5.Lcd.setTextSize(2);
-  M5.Lcd.setTextColor(LIGHTGREY);
-  M5.Lcd.drawString("Coolant Temp", 70, 120, 2);
-  M5.Lcd.drawString("Baro. Pressure", 10 , 0, 2);
-  M5.Lcd.drawString("Intake T", 180 , 0, 2);
+  
+  if(firstCoolantScreen){
+    M5.Lcd.fillScreen(BLACK);
+    /*
+    M5.Lcd.drawFastHLine(0, 120, 320 , YELLOW);
+    M5.Lcd.drawFastVLine(150, 0, 120, GREEN);
+    */
+    M5.Lcd.fillRect(0, 120, 320 ,5, YELLOW);
+    M5.Lcd.fillRect(150, 0, 5, 120, GREEN);
+    M5.Lcd.setCursor(0, 0);
+    M5.Lcd.setTextSize(2);
+    M5.Lcd.setTextColor(LIGHTGREY);
+    M5.Lcd.drawString("Coolant C°",100, 130, 2);
+    M5.Lcd.drawString("Engine %", 15 , 0, 2);
+    M5.Lcd.drawString("Intake C°", 190 , 0, 2);
+    firstMainScreen = true;
+    firstCoolantScreen = false;
+    firstEngineScreen = true;
+    firstBarScreen = true;
+    firstMafScreen = true;
+ }
+  
   sendOBDCommand(PID_COOLANT_TEMP);
-  delay(20);
-  sendOBDCommand(PID_BAROMETRIC_PRESSURE);
-  delay(20);
+  handleOBDResponse();
+  sendOBDCommand(PID_ENGINE_LOAD);
+  handleOBDResponse();
   sendOBDCommand(PID_AIR_INTAKE_TEMP);
-  delay(20);
   handleOBDResponse();
 
+  // Aggiorna solo se i valori sono cambiati
   if (coolantTemp != lastCoolantTempMenu) {
-    M5.Lcd.clearDisplay();
+    M5.Lcd.fillRect(140, 190, 80, 40, BLACK); // Cancella la vecchia area
     M5.Lcd.setTextSize(4);
     M5.Lcd.setTextColor((coolantTemp < 50) ? LIGHTGREY : (coolantTemp >= 40 && coolantTemp <= 65) ? BLUE : (coolantTemp > 65 && coolantTemp <= 80) ? GREENYELLOW : (coolantTemp >= 81 && coolantTemp <= 100) ? GREEN : (coolantTemp <= 102) ? ORANGE : RED);
     M5.Lcd.drawNumber(coolantTemp, 140, 190);
     lastCoolantTempMenu = coolantTemp; // Aggiorna lastCoolantTemp solo quando il valore cambia
   }
-  M5.Lcd.setTextSize(3);
-  M5.Lcd.setTextColor(LIGHTGREY);
-  M5.Lcd.drawNumber(barometricPressure, 60 , 80);
+
+  if (engineLoad != lastEngineLoad) {
+    M5.Lcd.fillRect(60, 80, 80, 40, BLACK); // Cancella la vecchia area
+    M5.Lcd.setTextSize(3);
+    M5.Lcd.setTextColor(LIGHTGREY);
+    M5.Lcd.drawNumber(engineLoad, 60 , 80);
+    lastEngineLoad = engineLoad; // Aggiorna lastBarometricPressure solo quando il valore cambia
+  }
 
   if (intakeTemp != lastIntakeTemp) {
+    M5.Lcd.fillRect(220, 80, 80, 40, BLACK); // Cancella la vecchia area
     M5.Lcd.drawNumber(intakeTemp, 220 , 80);
     lastIntakeTemp = intakeTemp;
   }
 }
-
 
 bool BTconnect() {
   ELM_PORT.begin(m5Name, true);  // Avvia la connessione Bluetooth
@@ -395,12 +420,21 @@ void updateDisplay() {
   static float lastEngineLoad = -999.0;
   static float lastMAF = -999.0;
   
-  for(int i=15; i<160; i+=20){ M5.Lcd.drawFastHLine(0, i, 320 , OLIVE); }
-  M5.Lcd.drawFastVLine(240, 0, 155, OLIVE);
-  M5.Lcd.setCursor(0, 0);
-  M5.Lcd.setTextSize(2);
+  if (firstMainScreen){
+     M5.Lcd.fillScreen(BLACK);
+    for(int i=15; i<160; i+=20){ M5.Lcd.drawFastHLine(0, i, 320 , OLIVE); }
+     M5.Lcd.drawFastVLine(240, 0, 155, OLIVE);
+     M5.Lcd.setCursor(0, 0);
+     M5.Lcd.setTextSize(2);
+    firstMainScreen = false;
+    firstCoolantScreen = true;
+    firstEngineScreen = true;
+    firstBarScreen = true;
+    firstMafScreen = true;
+  }
   
-  if (coolantTemp != lastCoolantTemp) {
+ 
+ if (coolantTemp != lastCoolantTemp) {
     M5.Lcd.fillRect(0, 0, 320, 20, BLACK);  // Aggiorna solo la parte della temperatura del liquido refrigerante
     M5.Lcd.setCursor(0, 0);
     M5.Lcd.setTextColor((coolantTemp < 50) ? LIGHTGREY : (coolantTemp >= 40 && coolantTemp <= 65) ? BLUE : (coolantTemp > 65 && coolantTemp <= 80) ? GREENYELLOW : (coolantTemp >= 81 && coolantTemp <= 100) ? GREEN : (coolantTemp <= 102) ? ORANGE : RED);
@@ -537,24 +571,20 @@ void writeToCircularBuffer(char c) {
 
 String readFromCircularBuffer(int numChars) {
     String result = "";
-    while (readIndex != writeIndex) {
+    int charsRead = 0;
+    
+    // Leggi dal buffer finché ci sono caratteri da leggere
+    // e non si è raggiunto il numero massimo di caratteri richiesti
+    while (readIndex != writeIndex && charsRead < numChars) {
         result += circularBuffer[readIndex];
         readIndex = (readIndex + 1) % BUFFER_SIZE;
+        charsRead++;
     }
-    return result; // Rimuove spazi bianchi extra
+
+    result.trim();  // Rimuove gli spazi bianchi extra all'inizio e alla fine
+    return result;
 }
-/*
-void coolantScreen() {
-  sendOBDCommand(PID_COOLANT_TEMP);
-  delay(20);
-  handleOBDResponse();
-  M5.Lcd.fillScreen(BLACK);
-  M5.Lcd.setTextSize(3);
-  M5.Lcd.setTextColor(WHITE);
-  M5.Lcd.setCursor(10, 10);
-  M5.Lcd.printf("Coolant Temp: %.1f C", coolantTemp);
-}
-*/
+
 void rpmScreen() {
   sendOBDCommand(PID_RPM);
   delay(20);
@@ -570,7 +600,14 @@ void engineLoadScreen() {
   sendOBDCommand(PID_ENGINE_LOAD);
   delay(20);
   handleOBDResponse();
-  M5.Lcd.fillScreen(BLACK);
+  if(firstEngineScreen){
+    M5.Lcd.fillScreen(BLACK);
+    firstMainScreen = true;
+    firstCoolantScreen = true;
+    firstEngineScreen = false;
+    firstBarScreen = true;
+    firstMafScreen = true;
+  }
   M5.Lcd.setTextSize(3);
   M5.Lcd.setTextColor(WHITE);
   M5.Lcd.setCursor(10, 10);
@@ -581,7 +618,15 @@ void mafScreen() {
   sendOBDCommand(PID_MAF);
   delay(20);
   handleOBDResponse();
-  M5.Lcd.fillScreen(BLACK);
+
+  if(firstMafScreen){
+     M5.Lcd.fillScreen(BLACK);
+    firstMainScreen = true;
+    firstCoolantScreen = true;
+    firstEngineScreen = true;
+    firstBarScreen = true;
+    firstMafScreen = false;
+  }
   M5.Lcd.setTextSize(3);
   M5.Lcd.setTextColor(WHITE);
   M5.Lcd.setCursor(10, 10);
@@ -592,11 +637,18 @@ void barometricScreen() {
   sendOBDCommand(PID_BAROMETRIC_PRESSURE);
   delay(20);
   handleOBDResponse();
-  M5.Lcd.fillScreen(BLACK);
+  if(firstBarScreen){
+    M5.Lcd.fillScreen(DARKGREY);
+    firstMainScreen = true;
+    firstCoolantScreen = true;
+    firstEngineScreen = true;
+    firstBarScreen = false;
+    firstMafScreen = true;
+  }
   M5.Lcd.setTextSize(3);
   M5.Lcd.setTextColor(WHITE);
   M5.Lcd.setCursor(10, 10);
-  M5.Lcd.printf("Barometric Pressure: %.1f kPa", barometricPressure);
+  M5.Lcd.printf("Bar kPa: %.1f kPa", barometricPressure);
 }
 
 void dtcStatusScreen() {
