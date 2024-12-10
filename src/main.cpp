@@ -86,7 +86,7 @@ const unsigned long voltageQueryInterval = 1000; // Intervallo di 4 secondi
 
 unsigned long lastVoltageQueryTime = 0;
 unsigned long lastOBDQueryTime = 0;
-unsigned long OBDQueryInterval = 500; // Intervallo di query OBD in millisecondi
+unsigned long OBDQueryInterval = 250; // Intervallo di query OBD in millisecondi
 
 const int BUFFER_SIZE = 256;
 char circularBuffer[BUFFER_SIZE];
@@ -152,6 +152,7 @@ void coolantScreen() {
   static float lastCoolantTempMenu = -999.0;
   static float lastBarometricPressure = -999.0;
   static float lastIntakeTemp = -999.0;
+  static float lastMAF = -999.0;
   
   if(firstCoolantScreen){
     M5.Lcd.fillScreen(BLACK);
@@ -159,15 +160,16 @@ void coolantScreen() {
     M5.Lcd.drawFastHLine(0, 120, 320 , YELLOW);
     M5.Lcd.drawFastVLine(150, 0, 120, GREEN);
     */
-    M5.Lcd.fillRect(0, 120, 320 ,5, YELLOW);
-    M5.Lcd.fillRect(150, 0, 5, 120, GREEN);
+    M5.Lcd.fillRect(0, 120, 320 ,5, OLIVE);
+    M5.Lcd.fillRect(150, 0, 5, 290, OLIVE);
     M5.Lcd.setCursor(0, 0);
     //M5.Lcd.setFreeFont(FF1);
     M5.Lcd.setTextSize(2);
     M5.Lcd.setTextColor(LIGHTGREY);
-    M5.Lcd.drawString("Coolant C°",100, 130, 2);
+    M5.Lcd.drawString("Coolant C°",10, 130, 2);
     M5.Lcd.drawString("Engine %", 15 , 0, 2);
     M5.Lcd.drawString("Intake C°", 190 , 0, 2);
+    M5.Lcd.drawString("MAF" , 220, 130 , 2 );
     firstMainScreen = true;
     firstCoolantScreen = false;
     firstEngineScreen = true;
@@ -181,13 +183,20 @@ void coolantScreen() {
   handleOBDResponse();
   sendOBDCommand(PID_AIR_INTAKE_TEMP);
   handleOBDResponse();
-
+  sendOBDCommand(PID_MAF);
+  handleOBDResponse();
+/*
+  coolantTemp++;
+  MAF++;
+  engineLoad++;
+  intakeTemp++;
+*/
   // Aggiorna solo se i valori sono cambiati
   if (coolantTemp != lastCoolantTempMenu) {
-    M5.Lcd.fillRect(140, 190, 80, 40, BLACK); // Cancella la vecchia area
-    M5.Lcd.setTextSize(4);
+    M5.Lcd.fillRect(40, 200, 90, 45, BLACK); // Cancella la vecchia area
+    M5.Lcd.setTextSize(3);
     M5.Lcd.setTextColor((coolantTemp < 50) ? LIGHTGREY : (coolantTemp >= 40 && coolantTemp <= 65) ? BLUE : (coolantTemp > 65 && coolantTemp <= 80) ? GREENYELLOW : (coolantTemp >= 81 && coolantTemp <= 100) ? GREEN : (coolantTemp <= 102) ? ORANGE : RED);
-    M5.Lcd.drawNumber(coolantTemp, 140, 190);
+    M5.Lcd.drawNumber(coolantTemp, 55, 200);
     lastCoolantTempMenu = coolantTemp; // Aggiorna lastCoolantTemp solo quando il valore cambia
   }
 
@@ -201,9 +210,16 @@ void coolantScreen() {
 
   if (intakeTemp != lastIntakeTemp) {
     M5.Lcd.fillRect(220, 80, 80, 40, BLACK); // Cancella la vecchia area
-    M5.Lcd.drawNumber(intakeTemp, 220 , 80);
+    M5.Lcd.drawNumber(intakeTemp, 240 , 80);
     lastIntakeTemp = intakeTemp;
   }
+
+  if (MAF != lastMAF) {
+    M5.Lcd.fillRect(220, 200, 80, 40, BLACK); // Cancella la vecchia area
+    M5.Lcd.drawNumber(MAF, 240 , 200);
+    lastMAF = MAF;
+  }
+
 }
 
 bool BTconnect() {
@@ -315,7 +331,7 @@ void dataRequestOBD() {
 }
 
 void handleOBDResponse() {
-  String response = bufferSerialData(1000, 100);  // Riempimento del buffer
+  String response = bufferSerialData(250, 100);  // Riempimento del buffer
   parseOBDData(response);  // Parsing del buffer
 }
 
