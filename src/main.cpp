@@ -1,5 +1,6 @@
 #include <M5Stack.h>
 #include <BluetoothSerial.h>
+//#include <Free_Fonts.h>
 
 #define DEBUG
 #define ButtonC GPIO_NUM_37
@@ -92,7 +93,7 @@ char circularBuffer[BUFFER_SIZE];
 int writeIndex = 0;
 int readIndex = 0;
 int screenIndex[5] = { 0, 1, 2, 3, 4 };
-int z = 0;
+int z = 1;
 int zLast = -1;
 
 void setup() {
@@ -161,6 +162,7 @@ void coolantScreen() {
     M5.Lcd.fillRect(0, 120, 320 ,5, YELLOW);
     M5.Lcd.fillRect(150, 0, 5, 120, GREEN);
     M5.Lcd.setCursor(0, 0);
+    //M5.Lcd.setFreeFont(FF1);
     M5.Lcd.setTextSize(2);
     M5.Lcd.setTextColor(LIGHTGREY);
     M5.Lcd.drawString("Coolant C°",100, 130, 2);
